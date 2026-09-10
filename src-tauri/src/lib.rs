@@ -6,7 +6,10 @@
 // mod menu;
 
 use std::{collections::HashSet, sync::{Arc, RwLock}};
-use tauri::{webview::{NewWindowResponse, WebviewWindowBuilder}, Emitter, WebviewUrl};
+use tauri::{
+    webview::{NewWindowResponse, WebviewWindowBuilder},
+    Emitter, Manager, WebviewUrl,
+};
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
 use tauri_plugin_opener::OpenerExt;
@@ -127,7 +130,19 @@ pub fn run() {
     #[cfg(feature = "updater")]
     let mut builder = tauri::Builder::default();
     #[cfg(not(feature = "updater"))]
-    let builder = tauri::Builder::default();
+    let mut builder = tauri::Builder::default();
+
+    // This must be the first registered plugin so concurrent launches are
+    // intercepted before the rest of the application starts.
+    builder = builder.plugin(tauri_plugin_single_instance::init(
+        |app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+        },
+    ));
 
     // #[cfg(target_os = "macos")]
     // {
