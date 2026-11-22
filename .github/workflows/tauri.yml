@@ -13,7 +13,7 @@ jobs:
         with: 
           submodules: true
       - name: Setup node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".node-version"
           package-manager-cache: false
@@ -48,13 +48,67 @@ jobs:
         run: Move-Item "src-tauri\target\release\bundle\msi\Cinny_${{ env.TAURI_VERSION }}_x64_en-US.msi.zip.sig" "src-tauri\target\release\bundle\msi\Cinny_desktop-x86_64.msi.zip.sig"
         shell: pwsh
       - name: Upload tagged release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           tag_name: ${{ github.ref_name }}
           files: |
             src-tauri/target/release/bundle/msi/Cinny_desktop-x86_64.msi
             src-tauri/target/release/bundle/msi/Cinny_desktop-x86_64.msi.zip
             src-tauri/target/release/bundle/msi/Cinny_desktop-x86_64.msi.zip.sig
+
+  # Windows-aarch64
+  windows-aarch-64:
+    runs-on: windows-11-arm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: 
+          submodules: true
+      - name: Setup node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".node-version"
+          package-manager-cache: false
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable # They use branch based releases
+      - name: Install cinny dependencies
+        run: cd cinny && npm ci
+      - name: Install tauri dependencies
+        run: npm ci
+      - name: Build desktop app with Tauri
+        uses: tauri-apps/tauri-action@73fb865345c54760d875b94642314f8c0c894afa # v0.6.1
+        with:
+          args: "--bundles nsis"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          NODE_OPTIONS: "--max_old_space_size=4096"
+      - name: Get app version (windows)
+        run: |
+          $json = (Get-Content "src-tauri\tauri.conf.json" -Raw) | ConvertFrom-Json
+          $version = $json.version
+          echo "Version: ${version}"
+          echo "TAURI_VERSION=${version}" >> $Env:GITHUB_ENV
+          echo "${Env:TAURI_VERSION}"
+        shell: pwsh
+      - name: Move nsis
+        run: Move-Item "src-tauri\target\release\bundle\nsis\Cinny_${{ env.TAURI_VERSION }}_arm64-setup.exe" "src-tauri\target\release\bundle\nsis\Cinny_desktop-aarch64.exe"
+        shell: pwsh
+      - name: Move nsis.zip
+        run: Move-Item "src-tauri\target\release\bundle\nsis\Cinny_${{ env.TAURI_VERSION }}_arm64-setup.nsis.zip" "src-tauri\target\release\bundle\nsis\Cinny_desktop-aarch64.nsis.zip
+        shell: pwsh
+      - name: Move nsis.zip.sig
+        run: Move-Item "src-tauri\target\release\bundle\nsis\Cinny_${{ env.TAURI_VERSION }}_arm64-setup.nsis.zip.sig" "src-tauri\target\release\bundle\nsis\Cinny_desktop-aarch64.nsis.zip.sig"
+        shell: pwsh
+      - name: Upload tagged release
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            src-tauri/target/release/bundle/nsis/Cinny_desktop-aarch64.exe
+            src-tauri/target/release/bundle/nsis/Cinny_desktop-aarch64.nsis.zip
+            src-tauri/target/release/bundle/nsis/Cinny_desktop-aarch64.nsis.zip.sig
 
   # Linux-x86_64
   linux-x86_64:
@@ -65,7 +119,7 @@ jobs:
         with: 
           submodules: true
       - name: Setup node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".node-version"
           package-manager-cache: false
@@ -98,7 +152,7 @@ jobs:
       - name: Move AppImage.tar.gz.sig
         run: mv "src-tauri/target/release/bundle/appimage/Cinny_${{ steps.vars.outputs.tag }}_amd64.AppImage.tar.gz.sig" "src-tauri/target/release/bundle/appimage/Cinny_desktop-x86_64.AppImage.tar.gz.sig"
       - name: Upload tagged release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           tag_name: ${{ github.ref_name }}
           files: |
@@ -116,7 +170,7 @@ jobs:
         with: 
           submodules: true
       - name: Setup node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".node-version"
           package-manager-cache: false
@@ -147,7 +201,7 @@ jobs:
       - name: Move app.tar.gz.sig
         run: mv "src-tauri/target/universal-apple-darwin/release/bundle/macos/Cinny.app.tar.gz.sig" "src-tauri/target/universal-apple-darwin/release/bundle/macos/Cinny_desktop-universal.app.tar.gz.sig"
       - name: Upload tagged release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           tag_name: ${{ github.ref_name }}
           files: |
