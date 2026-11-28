@@ -122,7 +122,10 @@ pub async fn show_desktop_notification(
     body: String,
     target: NotificationTarget,
     avatar_png: Option<Vec<u8>>,
-) -> Result<(), String> {
+) -> Result<bool, String> {
+    if suppress_while_focused(&app, &target) {
+        return Ok(false);
+    }
     #[cfg(target_os = "windows")]
     {
         use tauri::Emitter;
@@ -134,6 +137,9 @@ pub async fn show_desktop_notification(
             let avatar = avatar_png
                 .as_deref()
                 .and_then(|bytes| cache_avatar(&app, bytes));
+            if suppress_while_focused(&app, &target) {
+                return Ok(false);
+            }
             let make_toast = || {
                 let click_app = app.clone();
                 let click_target = target.clone();
@@ -158,11 +164,14 @@ pub async fn show_desktop_notification(
                     .show()
                     .is_ok()
                 {
-                    return Ok(());
+                    return Ok(true);
                 }
             }
             // Image loading/caching failure must not prevent a text notification.
-            make_toast().show().map_err(|e| e.to_string())
+            if suppress_while_focused(&app, &target) {
+                return Ok(false);
+            }
+            make_toast().show().map(|_| true).map_err(|e| e.to_string())
         })
         .await
         .map_err(|e| e.to_string())?
@@ -177,6 +186,20 @@ pub async fn show_desktop_notification(
             .title(title)
             .body(body)
             .show()
+            .map(|_| true)
             .map_err(|e| e.to_string())
     }
+}
+
+fn suppress_while_focused(app: &tauri::AppHandle, target: &NotificationTarget) -> bool {
+    use tauri::Manager;
+
+    if matches!(target, NotificationTarget::Test) {
+        return false;
+    }
+    app.get_webview_window("main").map_or(false, |window| {
+        window.is_visible().unwrap_or(false)
+            && !window.is_minimized().unwrap_or(false)
+            && window.is_focused().unwrap_or(false)
+    })
 }
