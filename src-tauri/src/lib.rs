@@ -4,12 +4,15 @@
 )]
 
 // mod menu;
+mod tray;
 
 use std::{collections::HashSet, sync::{Arc, RwLock}};
 use tauri::{
     webview::{NewWindowResponse, WebviewWindowBuilder},
-    Emitter, Manager, WebviewUrl,
+    Emitter, WebviewUrl,
 };
+#[cfg(not(target_os = "windows"))]
+use tauri::Manager;
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
 use tauri_plugin_opener::OpenerExt;
@@ -136,11 +139,7 @@ pub fn run() {
     // intercepted before the rest of the application starts.
     builder = builder.plugin(tauri_plugin_single_instance::init(
         |app, _args, _cwd| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.show();
-                let _ = window.unminimize();
-                let _ = window.set_focus();
-            }
+            tray::show_main_window(app);
         },
     ));
 
@@ -159,7 +158,14 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![set_push_to_talk_binds])
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_localhost::Builder::new(port).build())
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::all()
+                        & !tauri_plugin_window_state::StateFlags::VISIBLE,
+                )
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(move |app| {
@@ -237,9 +243,30 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             let window_builder = window_builder.title_bar_style(TitleBarStyle::Transparent);
             
-            window_builder.build()?;
+            let window = window_builder.build()?;
+            match tray::setup(app) {
+                Ok(()) => {
+                    let main_window = window.clone();
+                    window.on_window_event(move |event| {
+                        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                            if main_window.hide().is_ok() {
+                                api.prevent_close();
+                            }
+                        }
+                    });
+                }
+                Err(error) => {
+                    eprintln!("System tray unavailable: {}", error);
+                }
+            }
             Ok(())
         })
-        .run(context)
-        .expect("error while building tauri application");
+        .build(context)
+        .expect("error while building tauri application")
+        .run(|_app, _event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = _event {
+                tray::show_main_window(_app);
+            }
+        });
 }
