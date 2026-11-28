@@ -11,6 +11,7 @@
     "allow-show-desktop-notification",
     "allow-set-push-to-talk-binds",
     "allow-get-quit-on-close",
-    "allow-set-quit-on-close"
+    "allow-set-quit-on-close",
+    "allow-get-desktop-presence"
   ]
 }

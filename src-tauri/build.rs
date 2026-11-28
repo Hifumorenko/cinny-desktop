@@ -7,6 +7,7 @@ fn main() {
                     "set_push_to_talk_binds",
                     "get_quit_on_close",
                     "set_quit_on_close",
+                    "get_desktop_presence",
                 ]),
         ),
     )

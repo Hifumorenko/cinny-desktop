@@ -6,8 +6,9 @@ use tauri::{
 
 pub fn show_main_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
-        let _ = window.show();
-        let _ = window.unminimize();
+        if window.show().is_ok() && window.unminimize().is_ok() {
+            crate::window_presence::set_in_tray(&window, false);
+        }
         let _ = window.set_focus();
     }
 }

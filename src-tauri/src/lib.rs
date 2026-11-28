@@ -7,6 +7,7 @@
 mod tray;
 mod notifications;
 mod close_behavior;
+mod window_presence;
 
 use std::{collections::HashSet, sync::{Arc, RwLock}};
 use tauri::{
@@ -156,11 +157,13 @@ pub fn run() {
     builder
         .manage(PushToTalkBinds::default())
         .manage(notifications::NotificationState::default())
+        .manage(window_presence::WindowPresence::default())
         .invoke_handler(tauri::generate_handler![
             set_push_to_talk_binds,
             notifications::show_desktop_notification,
             close_behavior::get_quit_on_close,
             close_behavior::set_quit_on_close,
+            window_presence::get_desktop_presence,
         ])
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
@@ -266,9 +269,14 @@ pub fn run() {
                         main_window.app_handle().exit(0);
                     } else if tray_available && main_window.hide().is_ok() {
                         api.prevent_close();
+                        window_presence::set_in_tray(&main_window, true);
                     }
                 }
+                if matches!(event, tauri::WindowEvent::Resized(_) | tauri::WindowEvent::Focused(_)) {
+                    window_presence::observe_window(&main_window);
+                }
             });
+            window_presence::start(app.handle().clone());
             Ok(())
         })
         .build(context)

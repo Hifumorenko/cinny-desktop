@@ -38,6 +38,11 @@ test('the release window can read and save close behavior', () => {
   }
 });
 
+test('the release window can read its desktop presence', () => {
+  assert.ok(desktop.permissions.includes('allow-get-desktop-presence'));
+  assert.deepEqual(appPermissions['allow-get-desktop-presence'].commands.allow, ['get_desktop_presence']);
+});
+
 test('custom commands are granted only to the main window and Cinny release origin', () => {
   assert.equal(desktop.local, true);
   assert.deepEqual(desktop.windows, ['main']);
