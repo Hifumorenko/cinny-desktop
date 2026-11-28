@@ -46,6 +46,10 @@ tauri-plugin-single-instance = "2.4.4"
 tauri-plugin-updater = { version = "2.10.1", features = ["rustls-tls"], optional = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
+tauri-winrt-notification = "=0.7.2"
+image = { version = "=0.25.10", default-features = false, features = ["png"] }
+sha2 = "=0.10.9"
+windows-registry = "=0.6.1"
 winapi = { version = "0.3.9", features = ["winuser"] }
 
 [lib]

@@ -5,6 +5,7 @@
 
 // mod menu;
 mod tray;
+mod notifications;
 
 use std::{collections::HashSet, sync::{Arc, RwLock}};
 use tauri::{
@@ -155,8 +156,13 @@ pub fn run() {
 
     builder
         .manage(PushToTalkBinds::default())
-        .invoke_handler(tauri::generate_handler![set_push_to_talk_binds])
+        .manage(notifications::NotificationState::default())
+        .invoke_handler(tauri::generate_handler![
+            set_push_to_talk_binds,
+            notifications::show_desktop_notification,
+        ])
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_localhost::Builder::new(port).build())
         .plugin(
             tauri_plugin_window_state::Builder::default()

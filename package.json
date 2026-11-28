@@ -8,6 +8,7 @@
   },
   "scripts": {
     "tauri": "shx cp config.json cinny/ && tauri",
+    "test:desktop-acl": "node --test scripts/desktop-acl.test.mjs",
     "release": "node scripts/release.mjs",
     "bump": "node scripts/update-version.mjs"
   },

@@ -1,0 +1,14 @@
+{
+  "identifier": "desktop-commands",
+  "description": "Allow Cinny's main window to send desktop notifications and configure push-to-talk.",
+  "local": true,
+  "remote": {
+    "urls": ["http://localhost:44548/*"]
+  },
+  "windows": ["main"],
+  "platforms": ["windows", "macOS", "linux"],
+  "permissions": [
+    "allow-show-desktop-notification",
+    "allow-set-push-to-talk-binds"
+  ]
+}
