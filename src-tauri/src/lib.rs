@@ -6,14 +6,13 @@
 // mod menu;
 mod tray;
 mod notifications;
+mod close_behavior;
 
 use std::{collections::HashSet, sync::{Arc, RwLock}};
 use tauri::{
     webview::{NewWindowResponse, WebviewWindowBuilder},
-    Emitter, WebviewUrl,
+    Emitter, Manager, WebviewUrl,
 };
-#[cfg(not(target_os = "windows"))]
-use tauri::Manager;
 #[cfg(target_os = "macos")]
 use tauri::TitleBarStyle;
 use tauri_plugin_opener::OpenerExt;
@@ -160,6 +159,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             set_push_to_talk_binds,
             notifications::show_desktop_notification,
+            close_behavior::get_quit_on_close,
+            close_behavior::set_quit_on_close,
         ])
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
@@ -175,6 +176,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(move |app| {
+            app.manage(close_behavior::CloseBehavior::load(app.handle()));
             let handle = app.handle().clone();
             #[cfg(not(target_os = "windows"))]
             let binds = app.state::<PushToTalkBinds>().inner().clone();
@@ -250,21 +252,23 @@ pub fn run() {
             let window_builder = window_builder.title_bar_style(TitleBarStyle::Transparent);
             
             let window = window_builder.build()?;
-            match tray::setup(app) {
-                Ok(()) => {
-                    let main_window = window.clone();
-                    window.on_window_event(move |event| {
-                        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                            if main_window.hide().is_ok() {
-                                api.prevent_close();
-                            }
-                        }
-                    });
-                }
+            let tray_available = match tray::setup(app) {
+                Ok(()) => true,
                 Err(error) => {
                     eprintln!("System tray unavailable: {}", error);
+                    false
                 }
-            }
+            };
+            let main_window = window.clone();
+            window.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    if main_window.state::<close_behavior::CloseBehavior>().should_quit() {
+                        main_window.app_handle().exit(0);
+                    } else if tray_available && main_window.hide().is_ok() {
+                        api.prevent_close();
+                    }
+                }
+            });
             Ok(())
         })
         .build(context)

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-quit-on-close"
+description = "Enables the get_quit_on_close command without any pre-configured scope."
+commands.allow = ["get_quit_on_close"]
+
+[[permission]]
+identifier = "deny-get-quit-on-close"
+description = "Denies the get_quit_on_close command without any pre-configured scope."
+commands.deny = ["get_quit_on_close"]
